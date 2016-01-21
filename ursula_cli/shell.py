@@ -25,8 +25,9 @@ import sys
 import time
 import yaml
 
+from _manifest import Manifest
+
 LOG = logging.getLogger(__name__)
-ANSIBLE_VERSION = '1.9.2-bbg'
 
 
 def _initialize_logger(level=logging.DEBUG, logfile=None):
@@ -39,21 +40,15 @@ def _initialize_logger(level=logging.DEBUG, logfile=None):
     LOG.addHandler(handler)
 
 
-def _check_ansible_version():
-    process = subprocess.Popen(
-        ["ansible-playbook --version"], shell=True,
-        stdout=subprocess.PIPE)
-    output, _ = process.communicate()
-    retcode = process.poll()
-    if retcode:
-        raise Exception("Error discovering ansible version")
-    version_output = output.split('\n')[0]
-    version = version_output.split(' ')[1]
-    if not version == ANSIBLE_VERSION:
+def _check_manifest(path):
+    manifest = Manifest.load_file(path)
+    output = subprocess.check_output(['ansible-playbook', '--version']).strip()
+    version = output.split(' ')[1]
+    if not version == manifest.ansible_version:
         raise Exception("You are using ansible-playbook '%s'. "
                         "Current required version is: '%s'. You may install "
                         "the correct version with 'pip install -U -r "
-                        "requirements.txt'" % (version, ANSIBLE_VERSION))
+                        "requirements.txt'" % (version, manifest.ansible_version))
 
 
 def _append_envvar(key, value):
@@ -427,6 +422,8 @@ def main():
                         help='Provision environment in vagrant')
     parser.add_argument('--ursula-sudo', action='store_true',
                         help='Enable sudo')
+    parser.add_argument('--ursula-manifest', '-m',
+                        help='path to manifest for detailed configuration')
 
     args, extra_args = parser.parse_known_args()
     try:
@@ -437,7 +434,8 @@ def main():
         if args.vagrant:
             LOG.warn("--vagrant is depreciated, use --provisioner=vagrant")
             args.provisioner = "vagrant"
-        _check_ansible_version()
+        if args.ursula_manifest:
+            _check_manifest(args.ursula_manifest)
         rc = run(args, extra_args)
         sys.exit(rc)
     except Exception as e:
