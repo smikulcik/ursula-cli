@@ -25,7 +25,7 @@ import sys
 import time
 import yaml
 
-from _manifest import Manifest
+from ursula_cli.manifest import UrsulaManifest
 
 LOG = logging.getLogger(__name__)
 
@@ -41,7 +41,7 @@ def _initialize_logger(level=logging.DEBUG, logfile=None):
 
 
 def _check_manifest(path):
-    manifest = Manifest.load_file(path)
+    manifest = UrsulaManifest.load_file(path)
     output = subprocess.check_output(['ansible-playbook', '--version']).strip()
     version = output.split(' ')[1]
     if not version == manifest.ansible_version:
@@ -49,6 +49,12 @@ def _check_manifest(path):
                         "Current required version is: '%s'. You may install "
                         "the correct version with 'pip install -U -r "
                         "requirements.txt'" % (version, manifest.ansible_version))
+    for playbook in manifest.playbooks:
+        repo = os.path.join(manifest.playbook_path, playbook['repository'])
+        if not os.path.isfile(os.path.join(repo, playbook['file'])):
+            raise Exception("Playbook %s/%s not found in %s" %
+                            (playbook['repository'], playbook['file'],
+                             manifest.playbook_path))
 
 
 def _append_envvar(key, value):

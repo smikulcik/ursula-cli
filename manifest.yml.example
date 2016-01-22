@@ -1,0 +1,12 @@
+---
+ansible_version: 1.9.2-bbg
+
+playbook_path: ~/ci
+
+playbooks:
+  - file: site.yml
+    repository: ursula
+    git_rev: '2.0.2'
+  - file: site.yml
+    repository: freshkills-park
+    git_rev: master
