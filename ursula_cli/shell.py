@@ -397,15 +397,29 @@ def run(args, extra_args):
     else:
         if not args.ursula_user:
             args.ursula_user = "root"
-    rc = _run_ansible(inventory, args.playbook, extra_args=extra_args,
-                      user=args.ursula_user, sudo=args.ursula_sudo)
+
+    if args.ursula_manifest:
+        manifest = _check_manifest(args.ursula_manifest)
+        if args.playbook:
+            LOG.warn("using manifest; playbook %s ignored" % args.playbook)
+
+        for playbook in manifest.playbooks:
+            rc = _run_ansible(inventory, playbook['fullpath'], extra_args=extra_args,
+                              user=args.ursula_user, sudo=args.ursula_sudo)
+            if rc > 0:
+                return rc
+
+        return 0
+    else:
+        rc = _run_ansible(inventory, args.playbook, extra_args=extra_args,
+                        user=args.ursula_user, sudo=args.ursula_sudo)
     return rc
 
 
 def main():
     parser = argparse.ArgumentParser(description='A CLI wrapper for ansible')
     parser.add_argument('environment', help='The environment you want to use')
-    parser.add_argument('playbook', help='The playbook to run')
+    parser.add_argument('playbook', nargs='?', help='The playbook to run')
     # any args should be namespaced --ursula-$SOMETHING so as not to conflict
     # with ansible-playbook's command line parameters
     parser.add_argument(
@@ -436,8 +450,6 @@ def main():
         if args.vagrant:
             LOG.warn("--vagrant is depreciated, use --provisioner=vagrant")
             args.provisioner = "vagrant"
-        if args.ursula_manifest:
-            _check_manifest(args.ursula_manifest)
         rc = run(args, extra_args)
         sys.exit(rc)
     except Exception as e:
