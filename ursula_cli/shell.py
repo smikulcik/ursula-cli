@@ -49,12 +49,8 @@ def _check_manifest(path):
                         "Current required version is: '%s'. You may install "
                         "the correct version with 'pip install -U -r "
                         "requirements.txt'" % (version, manifest.ansible_version))
-    for playbook in manifest.playbooks:
-        repo = os.path.join(manifest.playbook_path, playbook['repository'])
-        if not os.path.isfile(os.path.join(repo, playbook['file'])):
-            raise Exception("Playbook %s/%s not found in %s" %
-                            (playbook['repository'], playbook['file'],
-                             manifest.playbook_path))
+    manifest.resolve_git_refs()
+    return manifest
 
 
 def _append_envvar(key, value):
