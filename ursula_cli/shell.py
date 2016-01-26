@@ -407,9 +407,10 @@ def run(args, extra_args):
             rc = _run_ansible(inventory, playbook['fullpath'], extra_args=extra_args,
                               user=args.ursula_user, sudo=args.ursula_sudo)
             if rc > 0:
-                return rc
+                break
 
-        return 0
+        manifest.clean_git_tempdirs()
+        return rc
     else:
         rc = _run_ansible(inventory, args.playbook, extra_args=extra_args,
                           user=args.ursula_user, sudo=args.ursula_sudo)

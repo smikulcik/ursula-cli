@@ -1,4 +1,5 @@
 import os
+import shutil
 import tempfile
 import yaml
 
@@ -45,6 +46,12 @@ class UrsulaManifest(object):
                 raise Exception("Playbook %s/%s not found in %s" %
                                 (playbook['repository'], playbook['file'],
                                 self.playbook_path))
+
+    def clean_git_tempdirs(self):
+        for playbook in self.playbooks:
+            if 'tempdir' in playbook:
+                shutil.rmtree(playbook['tempdir'])
+
 
     @staticmethod
     def load_file(path, **kwargs):
