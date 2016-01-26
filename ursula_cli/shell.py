@@ -412,7 +412,7 @@ def run(args, extra_args):
         return 0
     else:
         rc = _run_ansible(inventory, args.playbook, extra_args=extra_args,
-                        user=args.ursula_user, sudo=args.ursula_sudo)
+                          user=args.ursula_user, sudo=args.ursula_sudo)
     return rc
 
 
@@ -453,7 +453,7 @@ def main():
         rc = run(args, extra_args)
         sys.exit(rc)
     except Exception as e:
-        LOG.error(e)
+        LOG.error(e, exc_info=args.ursula_debug)
         sys.exit(-1)
 
 
