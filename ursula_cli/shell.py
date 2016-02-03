@@ -404,6 +404,8 @@ def run(args, extra_args):
             LOG.warn("using manifest; playbook %s ignored" % args.playbook)
 
         for playbook in manifest.playbooks:
+            # ansible.cfg is loaded from pwd
+            os.chdir(os.path.dirname(playbook['fullpath']))
             rc = _run_ansible(inventory, playbook['fullpath'], extra_args=extra_args,
                               user=args.ursula_user, sudo=args.ursula_sudo)
             if rc > 0:
