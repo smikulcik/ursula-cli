@@ -3,7 +3,7 @@ import shutil
 import tempfile
 import yaml
 
-from subprocess import check_call
+from subprocess import check_call, check_output
 
 class UrsulaManifest(object):
     def __init__(self, **kwargs):
@@ -14,6 +14,22 @@ class UrsulaManifest(object):
         self.playbook_auto_fetch = False
         if 'playbook_auto_fetch' in kwargs:
             self.playbook_auto_fetch = kwargs['playbook_auto_fetch']
+
+    def __enter__(self):
+        output = check_output(['ansible-playbook', '--version']).splitlines()[0]
+        version = output.split(' ')[1]
+        if not version == self.ansible_version:
+            raise Exception("You are using ansible-playbook '%s'. "
+                            "Current required version is: '%s'. You may install "
+                            "the correct version with 'pip install -U -r "
+                            "requirements.txt'" % (version, self.ansible_version))
+        self.resolve_git_refs()
+        return self
+
+    def __exit__(self, exc_type, exc_value, exc_traceback):
+        self.clean_git_tempdirs()
+        if exc_type is not None:
+            raise exc_type, exc_value, exc_traceback
 
     def resolve_git_refs(self):
         """
@@ -28,7 +44,7 @@ class UrsulaManifest(object):
                                 (playbook['repository'], self.playbook_path))
 
             if playbook['git_ref'] == 'dirty':
-                playbook['fullpath'] = os.path.join(repo, playbook['file'])
+                playbook['directory'] = repo
             else:
                 original_cwd = os.getcwd()
                 os.chdir(repo)
@@ -40,9 +56,10 @@ class UrsulaManifest(object):
                 playbook['tempdir'] = tempfile.mkdtemp()
                 check_call(['git', 'clone', '-b', 'URSULA_RUN', '--single-branch',
                             repo, playbook['tempdir']])
-                playbook['fullpath'] = os.path.join(playbook['tempdir'], playbook['file'])
+                playbook['directory'] = playbook['tempdir']
 
-            if not os.path.isfile(playbook['fullpath']):
+            if not os.path.isfile(os.path.join(playbook['directory'],
+                                               playbook['file'])):
                 raise Exception("Playbook %s/%s not found in %s" %
                                 (playbook['repository'], playbook['file'],
                                 self.playbook_path))

@@ -40,19 +40,6 @@ def _initialize_logger(level=logging.DEBUG, logfile=None):
     LOG.addHandler(handler)
 
 
-def _check_manifest(path):
-    manifest = UrsulaManifest.load_file(path)
-    output = subprocess.check_output(['ansible-playbook', '--version']).strip()
-    version = output.split(' ')[1]
-    if not version == manifest.ansible_version:
-        raise Exception("You are using ansible-playbook '%s'. "
-                        "Current required version is: '%s'. You may install "
-                        "the correct version with 'pip install -U -r "
-                        "requirements.txt'" % (version, manifest.ansible_version))
-    manifest.resolve_git_refs()
-    return manifest
-
-
 def _append_envvar(key, value):
     if key in os.environ:
         os.environ[key] = "%s %s" % (os.environ[key], value)
@@ -399,20 +386,19 @@ def run(args, extra_args):
             args.ursula_user = "root"
 
     if args.ursula_manifest:
-        manifest = _check_manifest(args.ursula_manifest)
         if args.playbook:
             LOG.warn("using manifest; playbook %s ignored" % args.playbook)
 
-        for playbook in manifest.playbooks:
-            # ansible.cfg is loaded from pwd
-            os.chdir(os.path.dirname(playbook['fullpath']))
-            rc = _run_ansible(inventory, playbook['fullpath'], extra_args=extra_args,
-                              user=args.ursula_user, sudo=args.ursula_sudo)
-            if rc > 0:
-                break
+        with UrsulaManifest.load_file(args.ursula_manifest) as manifest:
+            for playbook in manifest.playbooks:
+                # ansible.cfg is loaded from pwd
+                os.chdir(playbook['directory'])
+                rc = _run_ansible(inventory, playbook['file'], extra_args=extra_args,
+                                  user=args.ursula_user, sudo=args.ursula_sudo)
+                if rc > 0:
+                    break
 
-        manifest.clean_git_tempdirs()
-        return rc
+            return rc
     else:
         rc = _run_ansible(inventory, args.playbook, extra_args=extra_args,
                           user=args.ursula_user, sudo=args.ursula_sudo)
