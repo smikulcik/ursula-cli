@@ -404,6 +404,16 @@ def run(args, extra_args):
     else:
         if not args.ursula_user:
             args.ursula_user = "root"
+
+    validated = True
+    if not args.skip_validate:
+        if os.path.exists('validate.yml'):
+          if os.path.isfile('validate.yml'):
+                print "running validation playbook"
+                validated = _run_ansible(inventory, 'validate.yml',
+                            extra_args=extra_args, user=args.ursula_user,
+                            sudo=args.ursula_sudo)
+
     rc = _run_ansible(inventory, args.playbook, extra_args=extra_args,
                       user=args.ursula_user, sudo=args.ursula_sudo)
     return rc
@@ -431,6 +441,8 @@ def main():
                         help='Provision environment in vagrant')
     parser.add_argument('--ursula-sudo', action='store_true',
                         help='Enable sudo')
+    parser.add_argument('--skip-validate', action='store_true',
+                        help='skip attempt to run validate.yml')
 
     args, extra_args = parser.parse_known_args()
     try:
