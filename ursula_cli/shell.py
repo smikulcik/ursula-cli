@@ -34,6 +34,23 @@ LOG = logging.getLogger(__name__)
 MINIMUM_ANSIBLE_VERSION = '1.9'
 
 
+def which(program):
+    def is_exe(x): return os.path.isfile(x) and os.access(x, os.X_OK)
+
+    fpath, fname = os.path.split(program)
+    if fpath:
+        if is_exe(program):
+            return program
+    else:
+        for path in os.environ["PATH"].split(os.pathsep):
+            path = path.strip('"')
+            exe_file = os.path.join(path, program)
+            if is_exe(exe_file):
+                return exe_file
+
+    return None
+
+
 class OpenStackConfigurationError(Exception):
     pass
 
@@ -444,6 +461,11 @@ def run(args, extra_args):
     if not os.path.exists(inventory) or not os.path.isfile(inventory):
         raise Exception("Inventory file '%s' does not exist" % inventory)
 
+    # Discover the full path to our ursula-inventory script
+    dyninv = which('ursula-inventory')
+    if not dyninv:
+        raise Exception("Inventory script 'ursula-inventory not found in path")
+
     if args.ursula_ssh_config:
         ansible_ssh_config_file = args.ursula_ssh_config
     else:
@@ -498,11 +520,11 @@ def run(args, extra_args):
                 "--module also requires --module-args")
         if not args.module_hosts:
             args.module_hosts = "all"
-        rc = _run_module(inventory, args.module, module_args=args.module_args,
+        rc = _run_module(dyninv, args.module, module_args=args.module_args,
                          module_hosts=args.module_hosts, extra_args=extra_args,
                          user=args.ursula_user, sudo=args.ursula_sudo)
     else:
-        rc = _run_ansible(inventory, args.playbook, extra_args=extra_args,
+        rc = _run_ansible(dyninv, args.playbook, extra_args=extra_args,
                           user=args.ursula_user, sudo=args.ursula_sudo)
     return rc
 
