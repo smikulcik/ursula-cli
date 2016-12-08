@@ -575,6 +575,11 @@ def main():
             LOG.warn("--vagrant is depreciated, use --provisioner=vagrant")
             args.provisioner = "vagrant"
         _check_ansible_version()
+        if not args.ursula_user:
+            if args.provisioner == 'vagrant':
+                args.ursula_user = 'vagrant'
+            else:
+                args.ursula_user = 'ubuntu'
         rc = run(args, extra_args)
         sys.exit(rc)
     except Exception as e:
