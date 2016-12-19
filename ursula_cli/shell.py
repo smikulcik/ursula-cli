@@ -442,6 +442,8 @@ def run(args, extra_args):
     if not os.path.exists(args.environment):
         raise Exception("Environment '%s' does not exist" % args.environment)
 
+    args.environment = args.environment.rstrip('/').rstrip('\\')
+
     _set_envvar('URSULA_ENV', os.path.abspath(args.environment))
 
     inventory = os.path.join(args.environment, 'hosts')
