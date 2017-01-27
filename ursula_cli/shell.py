@@ -28,7 +28,9 @@ from ConfigParser import ConfigParser, NoOptionError, NoSectionError
 
 import yaml
 import ansible
-
+import paramiko
+from paramiko import BadHostKeyException, AuthenticationException, SSHException
+from paramiko import AutoAddPolicy
 
 LOG = logging.getLogger(__name__)
 MINIMUM_ANSIBLE_VERSION = '1.9'
@@ -103,13 +105,16 @@ def _set_default_env():
     _append_envvar("ANSIBLE_SSH_ARGS", "-o ControlPersist=300")
 
 
-def test_ssh(host):
-    try:
-        sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        sock.connect((host, 22))
-    except Exception:
-        return False
-    return True
+def test_ssh(host, user, key_file):
+    ssh = paramiko.SSHClient()
+    ssh.set_missing_host_key_policy(AutoAddPolicy())
+    try: 
+        ssh.connect(hostname=host, username=user, key_filename=key_file)
+        return True
+    except (BadHostKeyException, AuthenticationException, 
+        SSHException, socket.error) as e:
+            LOG.debug(e)
+            LOG.debug("Connection failed. Retrying... ")
 
 
 def _run_ansible(inventory, playbook, user='root', module_path='./library',
@@ -377,12 +382,15 @@ Host {server}
         _append_envvar("ANSIBLE_SSH_ARGS", "-F %s" % ansible_ssh_config_file)
 
     LOG.debug("waiting for SSH connectivity...")
+ 
+    user = args.ursula_user
+    
     if floating_ip:
-        while not test_ssh(floating_ip):
+        while not test_ssh(floating_ip, user, ssh_key_path):
             LOG.debug("waiting for SSH connectivity...")
             time.sleep(5)
     else:
-        while not test_ssh(test_ip):
+        while not test_ssh(str(servers.values()[0]), user, ssh_key_path):
             LOG.debug("waiting for SSH connectivity...")
             time.sleep(5)
 
