@@ -110,11 +110,12 @@ def test_ssh(host, user, key_file):
     ssh.set_missing_host_key_policy(AutoAddPolicy())
     try: 
         ssh.connect(hostname=host, username=user, key_filename=key_file)
+        LOG.debug("Connect to {0} successfully".format(host))
         return True
     except (BadHostKeyException, AuthenticationException, 
         SSHException, socket.error) as e:
             LOG.debug(e)
-            LOG.debug("Connection failed. Retrying... ")
+            LOG.debug("Connect to {0} failed. Retrying... ".format(host))
 
 
 def _run_ansible(inventory, playbook, user='root', module_path='./library',
@@ -385,14 +386,21 @@ Host {server}
  
     user = args.ursula_user
     
+    start_time = time.time()
+    timeout = 120
     if floating_ip:
         while not test_ssh(floating_ip, user, ssh_key_path):
+            if time.time() > start_time + timeout:
+                    sys.exit(-1)
             LOG.debug("waiting for SSH connectivity...")
             time.sleep(5)
-    else:
-        while not test_ssh(str(servers.values()[0]), user, ssh_key_path):
-            LOG.debug("waiting for SSH connectivity...")
-            time.sleep(5)
+    else:        
+        for ip in servers.itervalues():
+            while not test_ssh(str(ip), user, ssh_key_path):
+                if time.time() > start_time + timeout:
+                    sys.exit(-1)
+                LOG.debug("waiting for {} SSH connectivity...".format(ip))
+                time.sleep(5)
 
 
 def _vagrant_copy_yml(environment):
