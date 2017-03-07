@@ -488,6 +488,12 @@ def run(args, extra_args):
         if os.path.exists('envs/example/vagrant.yml'):
             if os.path.isfile('envs/example/vagrant.yml'):
                 extra_args += ['--extra-vars', '@envs/example/vagrant.yml']
+        if os.path.exists('%s/vagrant.yml' % args.environment):
+            if os.path.isfile('%s/vagrant.yml' % args.environtment):
+                extra_args += [
+                    '--extra-vars',
+                    '@%s/vagrant.yml' % args.environment
+                ]
         rc = _run_vagrant(environment=args.environment)
         if rc:
             return rc
